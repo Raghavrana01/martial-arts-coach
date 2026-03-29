@@ -1,7 +1,11 @@
 import os
 import re
+from pathlib import Path
 
+from dotenv import load_dotenv
 from groq import Groq
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 MODEL = "llama-3.3-70b-versatile"
 
@@ -78,9 +82,9 @@ _MEDICAL_ROUTE_PATTERN = re.compile(
 
 
 def call_agent(system_prompt: str, user_message: str) -> str:
-    api_key = "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"
+    api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        raise ValueError("Set GROQ_API_KEY in your environment.")
+        raise ValueError("Set GROQ_API_KEY in .env or your environment.")
 
     client = Groq(api_key=api_key)
     completion = client.chat.completions.create(
