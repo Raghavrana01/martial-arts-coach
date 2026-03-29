@@ -7,7 +7,7 @@ from groq import Groq
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "llama-3.1-8b-instant"
 
 TECHNIQUE_PROMPT = (
     "You are an experienced Muay Thai coach. Give clear, practical striking "
