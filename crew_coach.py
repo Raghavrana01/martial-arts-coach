@@ -320,6 +320,24 @@ def build_martial_arts_crew() -> Crew:
     )
 
 
+def run_agent_pipeline(user_message: str) -> tuple[list[str], str]:
+    """Run the CrewAI crew and return (agent roles in order, final synthesized reply)."""
+    crew = build_martial_arts_crew()
+    result = crew.kickoff(inputs={"student_question": user_message})
+
+    activated: list[str] = []
+    if result.tasks_output:
+        activated = [t.agent for t in result.tasks_output]
+
+    final_text = ""
+    if result.tasks_output:
+        final_text = result.tasks_output[-1].raw
+    if not final_text.strip():
+        final_text = result.raw if result.raw else str(result)
+
+    return activated, final_text.strip()
+
+
 def main() -> None:
     if not os.environ.get("GROQ_API_KEY"):
         print(
@@ -338,16 +356,9 @@ def main() -> None:
 
     student_question = user_line
 
-    crew = build_martial_arts_crew()
-    result = crew.kickoff(inputs={"student_question": student_question})
+    _agents, final_text = run_agent_pipeline(student_question)
 
-    final_text = ""
-    if result.tasks_output:
-        final_text = result.tasks_output[-1].raw
-    if not final_text.strip():
-        final_text = result.raw if result.raw else str(result)
-
-    print(final_text.strip())
+    print(final_text)
 
 
 if __name__ == "__main__":
