@@ -34,14 +34,23 @@ DOCTOR_PROMPT = (
     "doctor visit. You never diagnose definitively but give practical, safety-first guidance."
 )
 
-ROUTING_SYSTEM_PROMPT = (
-    "You are a routing classifier. Read the user's message and reply with exactly one "
-    "word, with no punctuation or explanation:\n"
-    "- TECHNIQUE — how to execute strikes, footwork, guard, drills, pad work, form, technique\n"
+ORCHESTRATOR_PROMPT = (
+    "You are the orchestrator for a martial arts coaching team. Read the student's message "
+    "and decide which specialist perspectives are needed. You may choose one or more.\n\n"
+    "Reply with ONLY a comma-separated list of agent codes (no other words, no explanation):\n"
+    "- TECHNIQUE — strikes, footwork, guard, drills, pad work, form, how to execute skills\n"
     "- PHILOSOPHY — mindset, discipline, fear, motivation, life lessons, wisdom, mental game\n"
-    "- PLANNER — weekly schedule, training plan, periodization, conditioning structure, programming\n"
+    "- PLANNER — weekly schedule, training plan, periodization, conditioning, programming\n"
     "- NUTRITION — meals, diet, weight cut, hydration, supplements, sleep, recovery food\n"
-    "Do not reply with DOCTOR; medical topics are routed separately."
+    "- DOCTOR — pain, injury, soreness, swelling, medical concerns, when to see a clinician\n\n"
+    "Order by relevance (most important first). Examples: TECHNIQUE, PLANNER,NUTRITION, "
+    "TECHNIQUE,PHILOSOPHY,DOCTOR"
+)
+
+SYNTHESIZER_PROMPT = (
+    "You are a master martial arts coach coordinator. You receive input from multiple "
+    "specialist agents and combine their advice into one clear, well-structured, actionable "
+    "response for the student. Never mention the agents by name. Speak as one unified coach voice."
 )
 
 AGENT_PROMPTS = {
@@ -70,7 +79,8 @@ _MEDICAL_ROUTE_PATTERN = re.compile(
 
 def call_agent(system_prompt: str, user_message: str) -> str:
     api_key = "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"
-
+    if not api_key:
+        raise ValueError("Set GROQ_API_KEY in your environment.")
 
     client = Groq(api_key=api_key)
     completion = client.chat.completions.create(
@@ -84,16 +94,61 @@ def call_agent(system_prompt: str, user_message: str) -> str:
     return content if content is not None else ""
 
 
-def _normalize_route(raw: str) -> str:
-    first = raw.strip().split()[0].upper().strip(".,!?;:\"'")
-    return first if first in VALID_ROUTES else "TECHNIQUE"
+def _parse_orchestrator_agent_list(raw: str) -> list[str]:
+    first_line = raw.strip().split("\n")[0]
+    parts = re.split(r"[,;]", first_line)
+    out: list[str] = []
+    for p in parts:
+        token = p.strip().upper().strip(".,!?;:\"'")
+        if token in VALID_ROUTES:
+            out.append(token)
+    return out
 
 
-def route_message(user_message: str) -> str:
-    if _MEDICAL_ROUTE_PATTERN.search(user_message):
-        return "DOCTOR"
-    raw = call_agent(ROUTING_SYSTEM_PROMPT, user_message)
-    return _normalize_route(raw)
+def orchestrate_agents(user_message: str) -> list[str]:
+    raw = call_agent(ORCHESTRATOR_PROMPT, user_message)
+    agents = _parse_orchestrator_agent_list(raw)
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for a in agents:
+        if a not in seen:
+            seen.add(a)
+            ordered.append(a)
+    if _MEDICAL_ROUTE_PATTERN.search(user_message) and "DOCTOR" not in ordered:
+        ordered.append("DOCTOR")
+    if not ordered:
+        ordered = ["TECHNIQUE"]
+    return ordered
+
+
+def run_agent_pipeline(user_message: str) -> tuple[list[str], str]:
+    agents = orchestrate_agents(user_message)
+    previous_output = ""
+    specialist_outputs: list[tuple[str, str]] = []
+
+    for name in agents:
+        if previous_output:
+            combined = (
+                f"Student question:\n{user_message}\n\n"
+                "Context from the prior specialist (build on or align with this):\n"
+                f"{previous_output}"
+            )
+        else:
+            combined = user_message
+        out = call_agent(AGENT_PROMPTS[name], combined)
+        specialist_outputs.append((name, out))
+        previous_output = out
+
+    blocks = []
+    for i, (_, text) in enumerate(specialist_outputs, 1):
+        blocks.append(f"--- Contribution {i} ---\n{text}")
+    synthesis_input = (
+        f"Student question:\n{user_message}\n\n"
+        "Specialist contributions to merge into one response:\n\n"
+        + "\n\n".join(blocks)
+    )
+    final = call_agent(SYNTHESIZER_PROMPT, synthesis_input)
+    return agents, final
 
 
 if __name__ == "__main__":
@@ -107,9 +162,9 @@ if __name__ == "__main__":
         if not user_message or user_message.lower() in ("quit", "exit", "q"):
             break
 
-        route = route_message(user_message)
-        label = AGENT_LABELS.get(route, route)
-        print(f"\n[{route}] {label} is responding...\n")
-        reply = call_agent(AGENT_PROMPTS[route], user_message)
+        agents, reply = run_agent_pipeline(user_message)
+        labels = [AGENT_LABELS.get(a, a) for a in agents]
+        print(f"\nOrchestrator: {', '.join(agents)}")
+        print(f"Pipeline: {' → '.join(labels)}\n")
         print(reply)
         print()
