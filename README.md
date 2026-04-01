@@ -4,6 +4,8 @@ A multi-agent AI coaching system for Muay Thai, Boxing, and Kickboxing — built
 
 > *"The successful warrior is the average man, with laser-like focus."* — Bruce Lee
 
+🚀 **Live Demo:** [martial-arts-coach-kdjjzmtrvapwl3zcc9stje.streamlit.app](https://martial-arts-coach-kdjjzmtrvapwl3zcc9stje.streamlit.app)
+
 ---
 
 ## What It Does
@@ -39,13 +41,21 @@ Next session, the coach already knows you. The longer you use it, the more perso
 
 ---
 
+## RAG — Knowledge Base
+
+The coach answers from a real martial arts knowledge base, not just LLM training data. Documents covering Muay Thai, Boxing, Kickboxing, nutrition, injury prevention, and mindset are stored in a ChromaDB vector database. On each query, the most relevant knowledge is retrieved and injected into the agent context before generation.
+
+---
+
 ## Tech Stack
 
 | Technology | Purpose |
 |-----------|---------|
-| Python 3 | Core language |
+| Python 3.11 | Core language |
 | CrewAI | Multi-agent orchestration |
 | Google Gemini 2.5 Flash | LLM powering all agents |
+| ChromaDB | Vector database for RAG |
+| Sentence Transformers | Embeddings for semantic search |
 | Streamlit | Web UI |
 | python-dotenv | Secure API key management |
 
@@ -68,7 +78,7 @@ source env/bin/activate
 
 **2. Install dependencies:**
 ```bash
-pip install streamlit crewai litellm python-dotenv
+pip install streamlit crewai litellm python-dotenv chromadb sentence-transformers google-generativeai
 ```
 
 **3. Configure your API keys:**
@@ -92,12 +102,15 @@ streamlit run app.py
 
 ```
 martial-arts-coach/
-├── app.py              # Streamlit frontend and main application logic
-├── crew_coach.py       # CrewAI agents, tasks, and sequential pipeline
-├── memory_manager.py   # Fact extraction and persistent memory storage
-├── .env                # API keys (never committed to version control)
-├── .env.example        # Template for environment setup
-└── memory.json         # Auto-generated: stores your training profile
+├── app.py                     # Streamlit frontend and main application logic
+├── crew_coach.py              # CrewAI agents, tasks, and sequential pipeline
+├── memory_manager.py          # Fact extraction and persistent memory storage
+├── knowledge_base.py          # ChromaDB vector store setup and search
+├── martial_arts_knowledge.py  # Martial arts knowledge documents
+├── setup_rag.py               # Script to build the knowledge base
+├── .env                       # API keys (never committed to version control)
+├── .env.example               # Template for environment setup
+└── memory.json                # Auto-generated: stores your training profile
 ```
 
 ---
