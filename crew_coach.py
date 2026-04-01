@@ -1,8 +1,8 @@
 """
-CrewAI martial arts coaching crew backed by Groq (Llama 3.3 70B Versatile).
+CrewAI martial arts coaching crew backed by Gemini (Gemini 2.5 Flash).
 
 Five specialist agents run in sequence, then a Synthesizer merges their outputs.
-Requires: crewai, python-dotenv, litellm (LiteLLM routes the groq/... model).
+Requires: crewai, python-dotenv, litellm.
 """
 
 from __future__ import annotations
@@ -25,8 +25,9 @@ from crewai.tasks.task_output import TaskOutput
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
+os.environ["GOOGLE_API_KEY"] = os.environ.get("GEMINI_API_KEY", "")
 
-GROQ_MODEL = "groq/llama-3.3-70b-versatile"
+GEMINI_MODEL = "gemini/gemini-2.5-flash"
 
 T = TypeVar("T")
 
@@ -111,17 +112,18 @@ def _make_pause_between_tasks(num_tasks: int) -> Callable[[TaskOutput], None]:
     return _pause_between_tasks
 
 
-def _groq_llm() -> LLM:
+def _get_llm() -> LLM:
     llm = LLM(
-        model=GROQ_MODEL,
+        model=GEMINI_MODEL,
         temperature=0.4,
+        api_key=os.environ.get("GEMINI_API_KEY"),
     )
     _patch_llm_retries(llm)
     return llm
 
 
 def build_martial_arts_crew() -> Crew:
-    llm = _groq_llm()
+    llm = _get_llm()
 
     technique_coach = Agent(
         role="Technique Coach",
@@ -218,6 +220,7 @@ def build_martial_arts_crew() -> Crew:
 
     technique_task = Task(
         description=(
+            "Coach's memory of student:\n{user_memory}\n\n"
             "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "Answer as the Technique Coach only. Focus on strikes, form, and training "
@@ -233,6 +236,7 @@ def build_martial_arts_crew() -> Crew:
 
     philosophy_task = Task(
         description=(
+            "Coach's memory of student:\n{user_memory}\n\n"
             "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "The Technique Coach has already responded (see context). Build on that output: "
@@ -250,6 +254,7 @@ def build_martial_arts_crew() -> Crew:
 
     planner_task = Task(
         description=(
+            "Coach's memory of student:\n{user_memory}\n\n"
             "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "The Philosopher's output is in context (along with prior work). Propose a "
@@ -266,6 +271,7 @@ def build_martial_arts_crew() -> Crew:
 
     nutrition_task = Task(
         description=(
+            "Coach's memory of student:\n{user_memory}\n\n"
             "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "Using the Training Planner's output in context, suggest nutrition and "
@@ -282,6 +288,7 @@ def build_martial_arts_crew() -> Crew:
 
     doctor_task = Task(
         description=(
+            "Coach's memory of student:\n{user_memory}\n\n"
             "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "Review the Nutritionist's output in context (and the chain before it). "
@@ -299,6 +306,7 @@ def build_martial_arts_crew() -> Crew:
 
     synthesizer_task = Task(
         description=(
+            "Coach's memory of student:\n{user_memory}\n\n"
             "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "You have the full outputs from five specialists in context (technique, philosophy, "
@@ -319,6 +327,7 @@ def build_martial_arts_crew() -> Crew:
             doctor_task,
         ],
     )
+
 
     return Crew(
         agents=[
@@ -346,6 +355,7 @@ def build_martial_arts_crew() -> Crew:
 def run_agent_pipeline(
     user_message: str,
     conversation_history: list[dict[str, str]] | None = None,
+    user_memory: str | None = None,
 ) -> tuple[list[str], str]:
     """Run the CrewAI crew and return (agent roles in order, final synthesized reply)."""
     crew = build_martial_arts_crew()
@@ -353,6 +363,7 @@ def run_agent_pipeline(
         inputs={
             "student_question": user_message,
             "conversation_history": _format_conversation_history(conversation_history),
+            "user_memory": user_memory or "No prior memory.",
         }
     )
 
@@ -370,9 +381,9 @@ def run_agent_pipeline(
 
 
 def main() -> None:
-    if not os.environ.get("GROQ_API_KEY"):
+    if not os.environ.get("GEMINI_API_KEY"):
         print(
-            "Missing GROQ_API_KEY. Add it to your .env file next to crew_coach.py.",
+            "Missing GEMINI_API_KEY. Add it to your .env file next to crew_coach.py.",
             file=sys.stderr,
         )
         sys.exit(1)

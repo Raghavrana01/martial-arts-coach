@@ -17,6 +17,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 from crew_coach import (
     run_agent_pipeline,
 )
+from memory_manager import extract_facts, load_memory, save_memory
 
 st.set_page_config(
     page_title="AI Martial Arts Coach",
@@ -98,9 +99,19 @@ st.title("🥋 AI Martial Arts Coach")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if not os.environ.get("GROQ_API_KEY"):
-    st.error("Set **GROQ_API_KEY** in your `.env` file next to `app.py`.")
+if "user_memory" not in st.session_state:
+    st.session_state.user_memory = load_memory()
+
+if not os.environ.get("GEMINI_API_KEY"):
+    st.error("Set **GEMINI_API_KEY** in your `.env` file next to `app.py`.")
     st.stop()
+
+# Show coach's memory
+if st.session_state.user_memory:
+    with st.expander("🥋 Coach remembers:", expanded=False):
+        for category, info in st.session_state.user_memory.items():
+            if info:
+                st.markdown(f"**{category.replace('_', ' ').title()}**: {info}")
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -132,6 +143,7 @@ if submitted and question.strip():
             activated, reply = run_agent_pipeline(
                 user_text,
                 conversation_history=conversation_history,
+                user_memory=str(st.session_state.user_memory),
             )
     except Exception as e:
         st.session_state.messages.append(
@@ -151,4 +163,15 @@ if submitted and question.strip():
             "agents": agents_line,
         },
     )
+
+    # Update memory after every assistant response
+    try:
+        new_facts = extract_facts(st.session_state.messages)
+        if new_facts:
+            st.session_state.user_memory.update(new_facts)
+            save_memory(st.session_state.user_memory)
+            print("Memory updated and saved to memory.json")
+    except Exception as e:
+        print(f"Failed to update memory: {e}")
+
     st.rerun()
