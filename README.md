@@ -1,79 +1,58 @@
-# Martial Arts Coach
+# 🥋 AI Martial Arts Coach
 
-An **AI martial arts coaching** CLI that answers questions about technique, mindset, training plans, nutrition, and injury-aware guidance. It uses several specialist “agents” behind one unified voice, coordinated by an orchestrator and merged by a synthesizer.
+A multi-agent AI coaching system for Muay Thai, Boxing, and Kickboxing — built with CrewAI, Gemini 2.5, and Streamlit.
 
-## Multi-agent architecture
+## What it does
+The **AI Martial Arts Coach** is a comprehensive training companion delivered through a modern Streamlit web UI. It features a wise, "Sensei-like" personality that provides expert guidance on technical skills, mindset, and physical preparation. Most importantly, the coach **remembers you across sessions**, maintaining a persistent understanding of your progress, injuries, and goals.
 
-Each turn works like a small pipeline:
+## Multi-Agent Architecture
+The system utilizes a sequential CrewAI pipeline of 6 specialized agents. Each agent builds upon the output of the previous one to provide a cohesive, multi-disciplinary response:
 
-1. **Orchestrator** — Reads your message and returns a comma-separated list of which specialists to involve (e.g. `PLANNER,NUTRITION`). It can pick **one or many** agents, ordered by relevance.
+1.  **Master Chen (Technique Coach)**: Focuses on striking mechanics, footwork, and defensive form.
+2.  **Sensei Ryu (Philosopher)**: Integrates mindset, discipline, and the "warrior's path" using Eastern philosophy and Stoicism.
+3.  **Coach Maya (Training Planner)**: Designs structured weekly training plans with duration and intensity.
+4.  **Dr. Kai (Nutritionist)**: Provides practical fuel and hydration advice tailored to a fighter's needs.
+5.  **Dr. Santos (Sports Medicine Doctor)**: Offers safety-first guidance on load management and injury awareness.
+6.  **Master Coach Coordinator (Synthesizer)**: Merges all specialist inputs into one unified, clear coaching voice.
 
-2. **Five specialist agents** — Each has its own system prompt and role:
-   - **TECHNIQUE** — Muay Thai–style striking: stance, guard, drills, form, safety.
-   - **PHILOSOPHY** — Mindset, discipline, fear, and life lessons (Eastern philosophy, Stoicism, Bruce Lee–style wisdom).
-   - **PLANNER** — Weekly combat-sports conditioning: day-by-day structure, duration, intensity.
-   - **NUTRITION** — Meals, weight management, hydration, recovery, sleep, concrete food ideas.
-   - **DOCTOR** — Sports-medicine style guidance: possible causes, first aid, recovery, when to see a clinician (no definitive diagnosis).
+## Long-Term Memory
+The application features a built-in memory system managed by `memory_manager.py`. It automatically extracts key facts (such as your training background, current goals, and active injuries) from your conversations and persists them in `memory.json`. This allows the coaching team to provide increasingly personalized advice the more you interact with them.
 
-   Specialists run **in sequence**. After the first, each sees the **previous specialist’s reply** as extra context so advice can build on what came before.
+## Tech Stack
+- **Python 3**
+- **CrewAI**: Multi-agent orchestration framework.
+- **Google Gemini 2.5 Flash**: The primary LLM powering all agents.
+- **Streamlit**: For the interactive web interface.
+- **python-dotenv**: For secure environment variable management.
 
-3. **Safety pass** — If your message mentions pain, injury, soreness, swelling, or similar medical wording, **DOCTOR** is added to the run if the orchestrator did not already include it.
+## Setup
+1.  **Create and activate a virtual environment**:
+    ```bash
+    python -m venv env
+    .\env\Scripts\Activate.ps1  # Windows
+    source env/bin/activate     # macOS/Linux
+    ```
+2.  **Install dependencies**:
+    ```bash
+    pip install streamlit crewai litellm python-dotenv
+    ```
+3.  **Configure environment variables**:
+    Create a `.env` file in the project root with your API keys:
+    ```env
+    GEMINI_API_KEY=your_gemini_api_key_here
+    GOOGLE_API_KEY=your_gemini_api_key_here
+    ```
+4.  **Run the application**:
+    ```bash
+    streamlit run app.py
+    ```
 
-4. **Synthesizer** — Takes all specialist outputs plus your original question and produces **one** clear, structured answer in a **single coach voice**, without naming the internal agents.
-
-All of those steps use the same underlying chat model via the Groq API (see below).
-
-## Tech stack
-
-| Piece | Choice |
-|--------|--------|
-| Language | **Python 3** |
-| LLM API | **[Groq](https://console.groq.com/)** (`groq` Python SDK) |
-| Model | **Meta Llama 3** — `llama-3.3-70b-versatile` |
-| Config | **`python-dotenv`** — loads `GROQ_API_KEY` from a `.env` file |
-
-## Install
-
-1. **Clone or copy** this project and open a terminal in the project folder.
-
-2. **Create and activate a virtual environment** (recommended):
-
-   ```powershell
-   python -m venv env
-   .\env\Scripts\Activate.ps1
-   ```
-
-   On macOS/Linux:
-
-   ```bash
-   python3 -m venv env
-   source env/bin/activate
-   ```
-
-3. **Install dependencies:**
-
-   ```bash
-   pip install groq python-dotenv
-   ```
-
-4. **Configure the API key** — Create a `.env` file in the project root (this repo’s `.gitignore` keeps it out of git):
-
-   ```env
-   GROQ_API_KEY=your_groq_api_key_here
-   ```
-
-   Get a key from the [Groq Console](https://console.groq.com/).
-
-## Run
-
-From the project directory, with the venv activated:
-
-```bash
-python coach.py
-```
-
-Type your question at the `You:` prompt. The app prints which agents were selected, then the **synthesized** reply. Use an empty line or `quit` / `exit` / `q` to leave.
+## Project Structure
+- **app.py**: The Streamlit frontend and main application logic.
+- **crew_coach.py**: Defines the CrewAI agents, tasks, and sequential pipeline.
+- **memory_manager.py**: Handles fact extraction via Gemini and JSON-based memory storage.
+- **.env**: Local configuration for API keys (not committed to version control).
+- **memory.json**: Persistent storage for user-specific training facts.
 
 ## Disclaimer
-
-This tool is for **education and general coaching ideas**, not a substitute for a qualified coach, doctor, or emergency care. For pain, injury, or medical concerns, follow the app’s reminders and seek professional care when appropriate.
+This AI coach is intended for educational and motivational purposes only. It is not a substitute for professional coaching or medical advice. Always consult with a qualified trainer or healthcare provider before beginning a new exercise program or treating an injury.
