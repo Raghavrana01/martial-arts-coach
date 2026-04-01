@@ -7,7 +7,6 @@ Requires: crewai, python-dotenv, litellm.
 
 from __future__ import annotations
 
-import asyncio
 import sys
 import time
 from collections.abc import Callable
@@ -76,30 +75,14 @@ def call_agent(llm_call: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         return llm_call(*args, **kwargs)
 
 
-async def _acall_agent(llm_acall: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-    """Async LLM path: same retry policy using ``asyncio.sleep``."""
-    try:
-        return await llm_acall(*args, **kwargs)
-    except Exception as exc:
-        if not _is_rate_limit_error(exc):
-            raise
-        await asyncio.sleep(20)
-        return await llm_acall(*args, **kwargs)
-
-
 def _patch_llm_retries(llm: LLM) -> None:
-    """Wrap sync/async LLM entry points so rate limits trigger one retry after 20s."""
+    """Wrap LLM entry points so rate limits trigger one retry after 20s."""
     orig_call = llm.call
-    orig_acall = llm.acall
 
     def wrapped_call(*args: Any, **kwargs: Any) -> Any:
         return call_agent(orig_call, *args, **kwargs)
 
-    async def wrapped_acall(*args: Any, **kwargs: Any) -> Any:
-        return await _acall_agent(orig_acall, *args, **kwargs)
-
     llm.call = wrapped_call  # type: ignore[method-assign]
-    llm.acall = wrapped_acall  # type: ignore[method-assign]
 
 
 def _make_pause_between_tasks(num_tasks: int) -> Callable[[TaskOutput], None]:
