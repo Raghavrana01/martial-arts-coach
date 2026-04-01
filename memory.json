@@ -1,10 +1,20 @@
 {
     "training_experience": "Six months of training",
-    "goals": "competing",
+    "goals": [
+        "Master the teep kick",
+        "Improve control and balance using the teep"
+    ],
     "injuries": "",
     "techniques_practiced": [
         "jab",
         "cross punch",
         "jab-cross drills"
+    ],
+    "training experience": "Actively training, focusing on improving specific techniques.",
+    "techniques practiced": [
+        "Teep kick (static)",
+        "Teep kick (walking)",
+        "Teep kick (integrated into jab-cross combos)",
+        "Jab-cross combo"
     ]
 }

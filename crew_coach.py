@@ -23,6 +23,7 @@ os.environ["CREWAI_DISABLE_TRACING"] = "true"
 from crewai import Agent, Crew, LLM, Process, Task
 from crewai.tasks.task_output import TaskOutput
 from dotenv import load_dotenv
+from knowledge_base import search_knowledge
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 os.environ["GOOGLE_API_KEY"] = os.environ.get("GEMINI_API_KEY", "")
@@ -122,8 +123,15 @@ def _get_llm() -> LLM:
     return llm
 
 
-def build_martial_arts_crew() -> Crew:
+def get_rag_context(query: str) -> str:
+    """Retrieves relevant knowledge from the vector database."""
+    results = search_knowledge(query, n_results=2)
+    return "\n\n".join(results) if results else "No additional coaching manual context found."
+
+
+def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
     llm = _get_llm()
+    rag_context = get_rag_context(user_message)
 
     technique_coach = Agent(
         role="Technique Coach",
@@ -222,6 +230,7 @@ def build_martial_arts_crew() -> Crew:
         description=(
             "Coach's memory of student:\n{user_memory}\n\n"
             "Recent conversation history:\n{conversation_history}\n\n"
+            "Relevant knowledge from coaching manual:\n{rag_context}\n\n"
             "Student question:\n{student_question}\n\n"
             "Answer as the Technique Coach only. Focus on strikes, form, and training "
             "application for Muay Thai, Boxing, and/or Kickboxing as relevant. Be concise "
@@ -349,7 +358,7 @@ def build_martial_arts_crew() -> Crew:
         process=Process.sequential,
         verbose=False,
         task_callback=_make_pause_between_tasks(6),
-    )
+    ), rag_context
 
 
 def run_agent_pipeline(
@@ -358,12 +367,13 @@ def run_agent_pipeline(
     user_memory: str | None = None,
 ) -> tuple[list[str], str]:
     """Run the CrewAI crew and return (agent roles in order, final synthesized reply)."""
-    crew = build_martial_arts_crew()
+    crew, rag_context = build_martial_arts_crew(user_message)
     result = crew.kickoff(
         inputs={
             "student_question": user_message,
             "conversation_history": _format_conversation_history(conversation_history),
             "user_memory": user_memory or "No prior memory.",
+            "rag_context": rag_context,
         }
     )
 
