@@ -18,6 +18,15 @@ from crew_coach import (
     run_agent_pipeline,
 )
 from memory_manager import extract_facts, load_memory, save_memory
+from knowledge_base import knowledge_base_exists, build_knowledge_base
+from martial_arts_knowledge import KNOWLEDGE_DOCUMENTS
+
+# Silent RAG initialization on startup
+try:
+    if not knowledge_base_exists():
+        build_knowledge_base(KNOWLEDGE_DOCUMENTS)
+except Exception:
+    pass
 
 st.set_page_config(
     page_title="AI Martial Arts Coach",
