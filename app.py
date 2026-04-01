@@ -14,7 +14,9 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-from crew_coach import run_agent_pipeline
+from crew_coach import (
+    run_agent_pipeline,
+)
 
 st.set_page_config(
     page_title="AI Martial Arts Coach",
@@ -123,10 +125,14 @@ with st.form("chat_form", clear_on_submit=True):
 if submitted and question.strip():
     user_text = question.strip()
     st.session_state.messages.append({"role": "user", "content": user_text})
+    conversation_history = st.session_state.messages[-6:]
 
     try:
         with st.spinner("Your coaches are deliberating..."):
-            activated, reply = run_agent_pipeline(user_text)
+            activated, reply = run_agent_pipeline(
+                user_text,
+                conversation_history=conversation_history,
+            )
     except Exception as e:
         st.session_state.messages.append(
             {

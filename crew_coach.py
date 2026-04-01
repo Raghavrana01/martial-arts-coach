@@ -31,6 +31,23 @@ GROQ_MODEL = "groq/llama-3.3-70b-versatile"
 T = TypeVar("T")
 
 
+def _format_conversation_history(
+    conversation_history: list[dict[str, str]] | None,
+) -> str:
+    if not conversation_history:
+        return "No prior conversation."
+
+    lines: list[str] = []
+    for message in conversation_history:
+        role = message.get("role", "user").strip() or "user"
+        content = message.get("content", "").strip()
+        if not content:
+            continue
+        lines.append(f"{role.title()}: {content}")
+
+    return "\n".join(lines) if lines else "No prior conversation."
+
+
 def _is_rate_limit_error(exc: BaseException) -> bool:
     if getattr(exc, "status_code", None) == 429:
         return True
@@ -201,6 +218,7 @@ def build_martial_arts_crew() -> Crew:
 
     technique_task = Task(
         description=(
+            "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "Answer as the Technique Coach only. Focus on strikes, form, and training "
             "application for Muay Thai, Boxing, and/or Kickboxing as relevant. Be concise "
@@ -215,6 +233,7 @@ def build_martial_arts_crew() -> Crew:
 
     philosophy_task = Task(
         description=(
+            "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "The Technique Coach has already responded (see context). Build on that output: "
             "add mindset, motivation, and philosophy (Stoicism, Eastern thought, Bruce Lee "
@@ -231,6 +250,7 @@ def build_martial_arts_crew() -> Crew:
 
     planner_task = Task(
         description=(
+            "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "The Philosopher's output is in context (along with prior work). Propose a "
             "one-week training outline that fits the student's implied level and goals. "
@@ -246,6 +266,7 @@ def build_martial_arts_crew() -> Crew:
 
     nutrition_task = Task(
         description=(
+            "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "Using the Training Planner's output in context, suggest nutrition and "
             "hydration that support that week: pre/post training meals, snacks, and "
@@ -261,6 +282,7 @@ def build_martial_arts_crew() -> Crew:
 
     doctor_task = Task(
         description=(
+            "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "Review the Nutritionist's output in context (and the chain before it). "
             "Add sports-medicine perspective: training safety, injury prevention or "
@@ -277,6 +299,7 @@ def build_martial_arts_crew() -> Crew:
 
     synthesizer_task = Task(
         description=(
+            "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
             "You have the full outputs from five specialists in context (technique, philosophy, "
             "training plan, nutrition, and sports-medicine safety). Merge them into ONE unified "
@@ -320,10 +343,18 @@ def build_martial_arts_crew() -> Crew:
     )
 
 
-def run_agent_pipeline(user_message: str) -> tuple[list[str], str]:
+def run_agent_pipeline(
+    user_message: str,
+    conversation_history: list[dict[str, str]] | None = None,
+) -> tuple[list[str], str]:
     """Run the CrewAI crew and return (agent roles in order, final synthesized reply)."""
     crew = build_martial_arts_crew()
-    result = crew.kickoff(inputs={"student_question": user_message})
+    result = crew.kickoff(
+        inputs={
+            "student_question": user_message,
+            "conversation_history": _format_conversation_history(conversation_history),
+        }
+    )
 
     activated: list[str] = []
     if result.tasks_output:
