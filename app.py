@@ -1,23 +1,15 @@
-"""
-Streamlit UI for the CrewAI martial arts coaching crew (crew_coach.run_agent_pipeline).
-Run: streamlit run app.py
-"""
-
-from __future__ import annotations
-
-import html
+import streamlit as st
 import os
 from pathlib import Path
-
-import streamlit as st
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from crew_coach import (
     run_agent_pipeline,
 )
-from memory_manager import extract_facts, load_memory, save_memory
+from memory_manager import extract_facts, load_memory, save_memory, MEMORY_FILE
 from knowledge_base import knowledge_base_exists, build_knowledge_base
 from martial_arts_knowledge import KNOWLEDGE_DOCUMENTS
 
@@ -28,159 +20,195 @@ try:
 except Exception:
     pass
 
+# Page Config
 st.set_page_config(
-    page_title="AI Martial Arts Coach",
+    page_title="Martial Arts AI Coach",
     page_icon="🥋",
-    layout="centered",
-    initial_sidebar_state="collapsed",
+    layout="wide",
 )
 
-st.markdown(
-    """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Noto Sans', sans-serif;
-    }
+# Premium Dark Martial Arts Theme CSS
+st.markdown("""
+    <style>
+    /* Main Background */
     .stApp {
-        background: radial-gradient(ellipse at 20% 0%, #2a1810 0%, transparent 50%),
-                    radial-gradient(ellipse at 80% 100%, #0f1a24 0%, transparent 45%),
-                    linear-gradient(175deg, #0a0a0c 0%, #121418 40%, #0c0e12 100%);
-        color: #e8e4df;
+        background-color: #0a0a0a;
+        color: #e0e0e0;
     }
-    .block-container {
-        padding-top: 1.5rem;
-        max-width: 52rem;
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #111111;
+        border-right: 1px solid #FFD700;
     }
-    h1 {
-        font-weight: 700 !important;
-        letter-spacing: 0.02em;
-        text-shadow: 0 2px 24px rgba(201, 162, 39, 0.25);
-        border-bottom: 1px solid rgba(201, 162, 39, 0.35);
-        padding-bottom: 0.75rem;
-        margin-bottom: 1.25rem !important;
+    
+    .sidebar-title {
+        color: #FFD700;
+        font-size: 1.8rem;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 2rem;
+        text-shadow: 2px 2px 4px #8B0000;
     }
-    div[data-testid="stChatMessage"] {
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(201, 162, 39, 0.12) !important;
-        border-radius: 14px !important;
-        margin-bottom: 0.75rem !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    
+    /* Chat Bubbles */
+    .user-message {
+        background-color: #8B0000;
+        color: white;
+        padding: 1rem;
+        border-radius: 15px 15px 0px 15px;
+        margin: 1rem 0;
+        float: right;
+        width: 80%;
+        border: 1px solid #4a0000;
     }
-    div[data-testid="stChatMessage"] p {
-        color: #e8e4df !important;
+    
+    .coach-message {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        padding: 1rem;
+        border-radius: 15px 15px 15px 0px;
+        margin: 1rem 0;
+        float: left;
+        width: 80%;
+        border-left: 5px solid #FFD700;
     }
-    .agent-meta {
-        color: #7a7874 !important;
-        font-size: 0.78rem !important;
-        margin-top: 0.35rem !important;
-        letter-spacing: 0.01em;
+    
+    .agent-tags {
+        color: #FFD700;
+        font-size: 0.7rem;
+        font-style: italic;
+        margin-top: 0.5rem;
     }
-    div[data-testid="stForm"] {
-        border: 1px solid rgba(201, 162, 39, 0.2);
-        border-radius: 12px;
-        padding: 0.75rem 1rem 1rem;
-        background: rgba(0, 0, 0, 0.35);
+    
+    /* Buttons */
+    .stButton>button {
+        background-color: #FFD700;
+        color: black;
+        border-radius: 5px;
+        border: none;
+        font-weight: bold;
+        transition: 0.3s;
+        width: 100%;
     }
-    .stTextInput input {
-        background: rgba(255, 255, 255, 0.06) !important;
-        color: #f0ece6 !important;
-        border: 1px solid rgba(201, 162, 39, 0.25) !important;
-        border-radius: 8px !important;
+    
+    .stButton>button:hover {
+        background-color: #DAA520;
+        color: white;
+        box-shadow: 0 0 10px #FFD700;
     }
-    .stButton button {
-        background: linear-gradient(180deg, #8b6914 0%, #5c4a0f 100%) !important;
-        color: #f5f0e4 !important;
-        border: 1px solid rgba(201, 162, 39, 0.5) !important;
-        font-weight: 600 !important;
+    
+    /* Input Styling */
+    .stTextInput>div>div>input {
+        background-color: #1e1e1e;
+        color: white;
+        border: 1px solid #FFD700;
     }
-    .stButton button:hover {
-        border-color: #d4af37 !important;
-        box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
+    
+    /* Hide default streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
 
-st.title("🥋 AI Martial Arts Coach")
-
+# Initialize Session States
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "user_memory" not in st.session_state:
     st.session_state.user_memory = load_memory()
 
-if not os.environ.get("GEMINI_API_KEY"):
-    st.error("Set **GEMINI_API_KEY** in your `.env` file next to `app.py`.")
-    st.stop()
-
-# Show coach's memory
-if st.session_state.user_memory:
-    with st.expander("🥋 Coach remembers:", expanded=False):
+# Sidebar
+with st.sidebar:
+    st.markdown('<div class="sidebar-title">🥋 SENSEI AI</div>', unsafe_allow_html=True)
+    
+    # Memory Section
+    st.markdown("### 🏺 Coach Remembers:")
+    if st.session_state.user_memory:
         for category, info in st.session_state.user_memory.items():
             if info:
                 st.markdown(f"**{category.replace('_', ' ').title()}**: {info}")
+    else:
+        st.info("No prior training memory yet.")
+    
+    st.divider()
+    
+    # Actions
+    if st.button("🗑️ Clear Memory"):
+        if MEMORY_FILE.exists():
+            os.remove(MEMORY_FILE)
+        st.session_state.user_memory = {}
+        st.success("Memory purged.")
+        st.rerun()
+        
+    if st.button("🔄 New Session"):
+        st.session_state.messages = []
+        st.success("Conversation cleared.")
+        st.rerun()
 
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-        if msg["role"] == "assistant" and msg.get("agents"):
-            st.markdown(
-                f'<p class="agent-meta">Agents: {html.escape(msg["agents"])}</p>',
-                unsafe_allow_html=True,
-            )
+# Main Chat Display
+st.markdown('<h2 style="color: #FFD700; text-align: center;">Combat Sports Dojo</h2>', unsafe_allow_html=True)
 
+chat_container = st.container()
+
+with chat_container:
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+                <div class="coach-message">
+                    <b>🥋 Sensei:</b><br>{msg["content"]}
+                    <div class="agent-tags">{msg.get("agents", "Crew")}</div>
+                </div>
+                """, unsafe_allow_html=True)
+    st.markdown('<div style="clear: both;"></div>', unsafe_allow_html=True)
+
+# Input Area
 with st.form("chat_form", clear_on_submit=True):
-    col_text, col_send = st.columns([5, 1])
-    with col_text:
-        question = st.text_input(
-            "Your question",
-            label_visibility="collapsed",
-            placeholder="Ask about technique, training, nutrition, mindset…",
-        )
-    with col_send:
-        submitted = st.form_submit_button("Send")
+    col1, col2 = st.columns([8, 2])
+    with col1:
+        question = st.text_input("", placeholder="Ask your coach anything...", label_visibility="collapsed")
+    with col2:
+        submitted = st.form_submit_button("Ask Sensei")
 
-if submitted and question.strip():
-    user_text = question.strip()
-    st.session_state.messages.append({"role": "user", "content": user_text})
-    conversation_history = st.session_state.messages[-6:]
+    if submitted and question.strip():
+        user_text = question.strip()
+        st.session_state.messages.append({"role": "user", "content": user_text})
+        
+        # Prepare context for pipeline
+        conversation_history = st.session_state.messages[-6:]
+        user_memory_str = str(st.session_state.user_memory)
+        
+        try:
+            with st.spinner("⚔️ Your coaches are deliberating..."):
+                activated, reply = run_agent_pipeline(
+                    user_text,
+                    conversation_history=conversation_history,
+                    user_memory=user_memory_str,
+                )
+        except Exception as e:
+            reply = f"The flow of energy was interrupted: {e}"
+            activated = ["Error"]
 
-    try:
-        with st.spinner("Your coaches are deliberating..."):
-            activated, reply = run_agent_pipeline(
-                user_text,
-                conversation_history=conversation_history,
-                user_memory=str(st.session_state.user_memory),
-            )
-    except Exception as e:
+        agents_line = " → ".join(activated) if activated else "Sensei"
         st.session_state.messages.append(
             {
                 "role": "assistant",
-                "content": f"Something went wrong: {e}",
-                "agents": "",
-            }
+                "content": reply,
+                "agents": agents_line,
+            },
         )
+
+        # Background memory update
+        try:
+            new_facts = extract_facts(st.session_state.messages)
+            if new_facts:
+                st.session_state.user_memory.update(new_facts)
+                save_memory(st.session_state.user_memory)
+                print("Memory updated and saved to memory.json")
+        except Exception as e:
+            print(f"Failed to update memory: {e}")
+
         st.rerun()
-
-    agents_line = " → ".join(activated) if activated else "Crew"
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": reply,
-            "agents": agents_line,
-        },
-    )
-
-    # Update memory after every assistant response
-    try:
-        new_facts = extract_facts(st.session_state.messages)
-        if new_facts:
-            st.session_state.user_memory.update(new_facts)
-            save_memory(st.session_state.user_memory)
-            print("Memory updated and saved to memory.json")
-    except Exception as e:
-        print(f"Failed to update memory: {e}")
-
-    st.rerun()
