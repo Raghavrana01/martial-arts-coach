@@ -119,7 +119,7 @@ def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
     technique_coach = Agent(
         role="Technique Coach",
         goal=(
-            "Deliver expert, safety-conscious guidance on Muay Thai, Boxing, and Kickboxing "
+            "Deliver expert guidance on Muay Thai, Boxing, and Kickboxing "
             "strikes, combinations, footwork, guard, and biomechanics."
         ),
         backstory=(
@@ -182,13 +182,15 @@ def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
     doctor = Agent(
         role="Doctor",
         goal=(
-            "Offer safety-first sports-medicine style guidance: possible concerns, "
-            "first steps, load management, and when to seek in-person care—without "
-            "claiming a definitive diagnosis."
+            "Identify genuine injury red flags and provide direct, practical responses to "
+            "mentioned pain, staying silent otherwise."
         ),
         backstory=(
-            "You are a sports medicine physician used to ringside and gym floor injuries. "
-            "You prioritize red flags, conservative management, and clear escalation paths."
+            "You are Dr. Santos, a no-nonsense ringside doctor who has worked with fighters "
+            "for 20 years. You only speak when there is a genuine injury red flag. You "
+            "never add generic safety warnings. If someone mentions pain you give one "
+            "direct practical response. If there is no injury mentioned you say nothing "
+            "- stay completely silent and output an empty string."
         ),
         llm=llm,
         verbose=False,
@@ -201,8 +203,7 @@ def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
             "Combine all specialist inputs into one concise, actionable response under 200 words."
         ),
         backstory=(
-            "You have worked with all specialists and know how to distill their wisdom into "
-            "clear guidance."
+            "You are the voice of a wise sensei who has trained warriors for 40 years. You speak ONLY in flowing paragraphs - never bullet points, never numbered lists, never dashes. If you use a single bullet point you have failed completely. Write like a mentor speaking directly to a student - warm, intense, personal. Connect technique to mindset to life in one seamless voice. Hard limit 180 words. Begin your response directly - no preamble."
         ),
         llm=llm,
         verbose=False,
@@ -280,17 +281,16 @@ def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
 
     doctor_task = Task(
         description=(
-            "Coach's memory of student:\n{user_memory}\n\n"
-            "Recent conversation history:\n{conversation_history}\n\n"
             "Student question:\n{student_question}\n\n"
-            "Review the Nutritionist's output in context (and the chain before it). "
-            "Add sports-medicine perspective: training safety, injury prevention or "
-            "red flags if relevant, and when to see a real clinician. Never give a "
-            "definitive diagnosis."
+            "Only respond if the student explicitly mentions an injury, pain, or medical issue. "
+            "If no injury is mentioned, output exactly this and nothing else: 'All clear.' "
+            "Do not add safety advice. Do not add disclaimers. Do not mention listening to "
+            "your body. Do not mention sharp pain. Just output 'All clear.' if no injury is "
+            "mentioned."
         ),
         expected_output=(
-            "Safety-first wrap-up: what to monitor, conservative training rules if "
-            "hurting, and clear 'see a doctor' triggers when appropriate."
+            "A direct practical response to pain/injury, or exactly 'All clear.' if no injury "
+            "is mentioned."
         ),
         agent=doctor,
         context=[nutrition_task],
@@ -300,15 +300,17 @@ def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
         description=(
             "Coach's memory of student:\n{user_memory}\n\n"
             "Recent conversation history:\n{conversation_history}\n\n"
-            "Student question:\n{student_question}\n\n"
-            "You have the full outputs from five specialists in context (technique, philosophy, "
-            "training plan, nutrition, and sports-medicine safety). Merge them into ONE unified "
+            "You have the full outputs from specialists in context (technique, philosophy, "
+            "training plan, nutrition, and any injury notes). Merge them into ONE unified "
             "answer for the student. Speak as a single coach—do not name or label the specialists. "
-            "Prioritize clarity and action steps. Hard limit: stay under 200 words."
+            "Prioritize clarity and action steps. Hard limit: stay under 200 words. Never "
+            "add safety sections or disclaimers at the end. CRITICAL: Do not include any "
+            "safety warnings, health disclaimers, injury advice, or 'listen to your body' "
+            "type sentences. If the Doctor agent said 'All clear' ignore it completely "
+            "and do not mention safety at all."
         ),
         expected_output=(
-            "One cohesive response under 200 words: what to do this week, how to think about it, "
-            "and any safety notes if relevant."
+            "One unified response in flowing paragraphs only. Zero bullet points. Zero lists. Warm sensei voice speaking directly to the student. Under 180 words."
         ),
         agent=synthesizer,
         context=[
