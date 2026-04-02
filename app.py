@@ -59,7 +59,7 @@ st.markdown("""
         border-radius: 15px 15px 0px 15px;
         margin: 1rem 0;
         float: right;
-        width: 80%;
+        width: 85%;
         border: 1px solid #4a0000;
     }
     
@@ -70,7 +70,7 @@ st.markdown("""
         border-radius: 15px 15px 15px 0px;
         margin: 1rem 0;
         float: left;
-        width: 80%;
+        width: 85%;
         border-left: 5px solid #FFD700;
     }
     
@@ -105,6 +105,15 @@ st.markdown("""
         border: 1px solid #FFD700;
     }
     
+    .plan-box {
+        background-color: #111111;
+        border: 1px solid #FFD700;
+        padding: 20px;
+        border-radius: 10px;
+        color: #e0e0e0;
+        white-space: pre-wrap;
+    }
+
     /* Hide default streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -119,7 +128,10 @@ if "messages" not in st.session_state:
 if "user_memory" not in st.session_state:
     st.session_state.user_memory = load_memory()
 
-# Sidebar
+if "current_plan" not in st.session_state:
+    st.session_state.current_plan = ""
+
+# --- Sidebar ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">🥋 SENSEI AI</div>', unsafe_allow_html=True)
     
@@ -147,68 +159,139 @@ with st.sidebar:
         st.success("Conversation cleared.")
         st.rerun()
 
-# Main Chat Display
-st.markdown('<h2 style="color: #FFD700; text-align: center;">Combat Sports Dojo</h2>', unsafe_allow_html=True)
-
-chat_container = st.container()
-
-with chat_container:
-    for msg in st.session_state.messages:
-        if msg["role"] == "user":
-            st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-                <div class="coach-message">
-                    <b>🥋 Sensei:</b><br>{msg["content"]}
-                    <div class="agent-tags">{msg.get("agents", "Crew")}</div>
-                </div>
-                """, unsafe_allow_html=True)
-    st.markdown('<div style="clear: both;"></div>', unsafe_allow_html=True)
-
-# Input Area
-with st.form("chat_form", clear_on_submit=True):
-    col1, col2 = st.columns([8, 2])
-    with col1:
-        question = st.text_input("", placeholder="Ask your coach anything...", label_visibility="collapsed")
-    with col2:
-        submitted = st.form_submit_button("Ask Sensei")
-
-    if submitted and question.strip():
-        user_text = question.strip()
-        st.session_state.messages.append({"role": "user", "content": user_text})
+# --- Onboarding Screen ---
+if not st.session_state.user_memory:
+    st.markdown('<h2 style="color: #FFD700; text-align: center;">Welcome to the Dojo</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center;">Before we begin your training, Sensei needs to know who you are.</p>', unsafe_allow_html=True)
+    
+    with st.form("onboarding_form"):
+        exp_level = st.selectbox("What is your experience level?", ["Beginner", "Intermediate", "Advanced"])
+        goal = st.selectbox("What is your primary goal?", ["Get Fit", "Compete", "Self Defence", "General Martial Arts"])
+        styles = st.multiselect("What styles do you train?", ["Muay Thai", "Boxing", "Kickboxing", "MMA", "Other"])
         
-        # Prepare context for pipeline
-        conversation_history = st.session_state.messages[-6:]
-        user_memory_str = str(st.session_state.user_memory)
+        submitted = st.form_submit_button("Start Training")
+        if submitted:
+            onboarding_data = {
+                "experience_level": exp_level,
+                "primary_goal": goal,
+                "styles_trained": ", ".join(styles) if styles else "Not specified"
+            }
+            save_memory(onboarding_data)
+            st.session_state.user_memory = onboarding_data
+            st.success("Your profile is recorded. Welcome, student.")
+            st.rerun()
+    st.stop()
+
+# --- Main App Tabs ---
+tab1, tab2 = st.tabs(["🥋 Dojo Chat", "📋 Training Plan"])
+
+# --- Tab 1: Dojo Chat ---
+with tab1:
+    st.markdown('<h2 style="color: #FFD700; text-align: center;">Combat Sports Dojo</h2>', unsafe_allow_html=True)
+
+    chat_container = st.container()
+
+    with chat_container:
+        for msg in st.session_state.messages:
+            if msg["role"] == "user":
+                st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                    <div class="coach-message">
+                        <b>🥋 Sensei:</b><br>{msg["content"]}
+                        <div class="agent-tags">{msg.get("agents", "Crew")}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        st.markdown('<div style="clear: both;"></div>', unsafe_allow_html=True)
+
+    # Input Area
+    with st.form("chat_form", clear_on_submit=True):
+        col1, col2 = st.columns([8, 2])
+        with col1:
+            question = st.text_input("", placeholder="Ask your coach anything...", label_visibility="collapsed")
+        with col2:
+            submitted = st.form_submit_button("Ask Sensei")
+
+        if submitted and question.strip():
+            user_text = question.strip()
+            st.session_state.messages.append({"role": "user", "content": user_text})
+            
+            # Prepare context for pipeline
+            conversation_history = st.session_state.messages[-6:]
+            user_memory_str = str(st.session_state.user_memory)
+            
+            try:
+                with st.spinner("⚔️ Your coaches are deliberating..."):
+                    activated, reply = run_agent_pipeline(
+                        user_text,
+                        conversation_history=conversation_history,
+                        user_memory=user_memory_str,
+                    )
+            except Exception as e:
+                reply = f"The flow of energy was interrupted: {e}"
+                activated = ["Error"]
+
+            agents_line = " → ".join(activated) if activated else "Sensei"
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": reply,
+                    "agents": agents_line,
+                },
+            )
+
+            # Background memory update
+            try:
+                new_facts = extract_facts(st.session_state.messages)
+                if new_facts:
+                    st.session_state.user_memory.update(new_facts)
+                    save_memory(st.session_state.user_memory)
+                    print("Memory updated and saved to memory.json")
+            except Exception as e:
+                print(f"Failed to update memory: {e}")
+
+            st.rerun()
+
+# --- Tab 2: Training Plan ---
+with tab2:
+    st.markdown('<h2 style="color: #FFD700; text-align: center;">Personalized Training Plan</h2>', unsafe_allow_html=True)
+    
+    with st.container():
+        col1, col2 = st.columns(2)
+        with col1:
+            days = st.slider("Training days per week", 1, 7, 3)
+            duration = st.number_input("Session length (minutes)", 30, 180, 60, 15)
+        with col2:
+            focus = st.text_input("Specific focus area", placeholder="e.g. Footwork, Power, Conditioning...")
+            
+        generate = st.button("Generate My Plan")
         
-        try:
-            with st.spinner("⚔️ Your coaches are deliberating..."):
-                activated, reply = run_agent_pipeline(
-                    user_text,
-                    conversation_history=conversation_history,
-                    user_memory=user_memory_str,
-                )
-        except Exception as e:
-            reply = f"The flow of energy was interrupted: {e}"
-            activated = ["Error"]
+        if generate:
+            plan_prompt = (
+                f"Create a detailed weekly training plan for a {st.session_state.user_memory.get('experience_level', 'student')} "
+                f"martial artist. They train {days} days a week for {duration} minutes per session. "
+                f"Focus area: {focus if focus else 'General fundamentals'}. "
+                f"Context: {st.session_state.user_memory}"
+            )
+            
+            try:
+                with st.spinner("⚔️ Crafting your specialized regime..."):
+                    _, reply = run_agent_pipeline(
+                        plan_prompt,
+                        conversation_history=[],
+                        user_memory=str(st.session_state.user_memory)
+                    )
+                    st.session_state.current_plan = reply
+            except Exception as e:
+                st.error(f"Failed to generate plan: {e}")
 
-        agents_line = " → ".join(activated) if activated else "Sensei"
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": reply,
-                "agents": agents_line,
-            },
-        )
-
-        # Background memory update
-        try:
-            new_facts = extract_facts(st.session_state.messages)
-            if new_facts:
-                st.session_state.user_memory.update(new_facts)
-                save_memory(st.session_state.user_memory)
-                print("Memory updated and saved to memory.json")
-        except Exception as e:
-            print(f"Failed to update memory: {e}")
-
-        st.rerun()
+        if st.session_state.current_plan:
+            st.markdown("### 📜 Your Weekly Regime")
+            st.markdown(f'<div class="plan-box">{st.session_state.current_plan}</div>', unsafe_allow_html=True)
+            
+            st.download_button(
+                label="📥 Download Plan",
+                data=st.session_state.current_plan,
+                file_name="martial_arts_training_plan.txt",
+                mime="text/plain"
+            )
