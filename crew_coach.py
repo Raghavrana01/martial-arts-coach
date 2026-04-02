@@ -109,7 +109,9 @@ def _get_llm() -> LLM:
 def get_rag_context(query: str) -> str:
     """Retrieves relevant knowledge from the vector database."""
     results = search_knowledge(query, n_results=2)
-    return "\n\n".join(results) if results else "No additional coaching manual context found."
+    if not results:
+        return "No specific knowledge base documents found for this query. Answer from your own expert knowledge."
+    return "\n\n".join(results)
 
 
 def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
@@ -124,6 +126,7 @@ def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
         ),
         backstory=(
             "You are a veteran striking coach who has trained amateur and pro fighters. "
+            "You have deep knowledge of ALL striking martial arts including Muay Thai, Boxing, Kickboxing, Krav Maga, Karate, Taekwondo, Capoeira, and MMA. When asked about any martial art you give specific, factual, technical answers about that art's actual principles and techniques. You never give vague philosophical answers when someone asks a technical question. "
             "You break down mechanics clearly, correct common mistakes, and always tie "
             "technique to balance, hip engagement, and protecting the chin."
         ),
@@ -212,7 +215,7 @@ def build_martial_arts_crew(user_message: str) -> tuple[Crew, str]:
             "Combine all specialist inputs into one concise, actionable response under 200 words."
         ),
         backstory=(
-            "You are the voice of a wise sensei who has trained warriors for 40 years. You speak ONLY in flowing paragraphs - never bullet points, never numbered lists, never dashes. If you use a single bullet point you have failed completely. Write like a mentor speaking directly to a student - warm, intense, personal. Connect technique to mindset to life in one seamless voice. Hard limit 180 words. Begin your response directly - no preamble."
+            "You are the voice of a wise sensei who has trained warriors for 40 years. You speak ONLY in flowing paragraphs - never bullet points, never numbered lists, never dashes. If you use a single bullet point you have failed completely. Write like a mentor speaking directly to a student - warm, intense, personal. Connect technique to mindset to life in one seamless voice. When the student asks a technical question about a specific martial art, LEAD with the technical answer from Master Chen. Philosophy from Sensei Ryu should support the technical answer, not replace it. Hard limit 180 words. Begin your response directly - no preamble."
         ),
         llm=llm,
         verbose=False,

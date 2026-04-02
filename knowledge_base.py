@@ -41,7 +41,8 @@ def build_knowledge_base(documents: list[str]):
 def search_knowledge(query: str, n_results: int = 3) -> list[str]:
     """
     Searches the knowledge base for the most relevant chunks 
-    matching the query.
+    matching the query. Returns an empty list if no results 
+    with a distance score <= 1.5 are found.
     """
     client = _get_client()
     try:
@@ -52,11 +53,19 @@ def search_knowledge(query: str, n_results: int = 3) -> list[str]:
         
         results = collection.query(
             query_texts=[query],
-            n_results=n_results
+            n_results=n_results,
+            include=['documents', 'distances']
         )
         
-        # Flatten the nested list of results returned by Chroma
-        return results['documents'][0] if results['documents'] else []
+        if not results['documents'] or not results['distances']:
+            return []
+            
+        relevant_docs = []
+        for doc, dist in zip(results['documents'][0], results['distances'][0]):
+            if dist <= 1.5:
+                relevant_docs.append(doc)
+                
+        return relevant_docs
     except Exception as e:
         print(f"Knowledge base search error: {e}")
         return []
