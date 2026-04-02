@@ -1,49 +1,74 @@
 # 🥋 AI Martial Arts Coach
 
-A multi-agent AI coaching system for Muay Thai, Boxing, and Kickboxing — built with CrewAI, Google Gemini 2.5, and Streamlit.
-
 > *"The successful warrior is the average man, with laser-like focus."* — Bruce Lee
 
-🚀 **Live Demo:** [martial-arts-coach-kdjjzmtrvapwl3zcc9stje.streamlit.app](https://martial-arts-coach-kdjjzmtrvapwl3zcc9stje.streamlit.app)
+A team of 6 AI specialists who collaborate in real-time to coach you in Muay Thai, Boxing, and Kickboxing. Not a chatbot. A coaching system that thinks, remembers, and grows with you.
+
+🚀 **[Try It Live →](https://martial-arts-coach-kdjjzmtrvapwl3zcc9stje.streamlit.app)**
 
 ---
 
-## What It Does
+## What Makes This Different
 
-This is not a chatbot. It's a team of AI specialists who collaborate to answer your questions — then a master coordinator who distills their combined wisdom into one unified coaching voice.
+Most AI tools give you one generic response. This system routes your question to the right specialists, runs them in sequence — each one building on the last — then synthesizes everything into one unified coaching voice.
 
-Ask about technique, mindset, training plans, nutrition, or injuries. The system decides which experts you need, runs them in sequence, and delivers a single, coherent response — as if a wise sensei had consulted their entire staff before speaking.
+Ask about your jab. You get technique from Master Chen, mental context from Sensei Ryu, a drill plan from Coach Maya, recovery advice from Dr. Kai, and one clean response that sounds like a single wise sensei who consulted his entire staff before speaking.
 
-The coach also **remembers you**. Tell it your goals, your injuries, your training background — and it carries that knowledge into every future session.
+**And it remembers you.** Tell it you've been training 6 months, that your left hook is weak, that you want to compete. Come back tomorrow — it already knows.
 
 ---
 
-## Multi-Agent Architecture
+## Features
 
-Six CrewAI agents run sequentially. Each one reads the previous agent's output and builds on it — true collaboration, not parallel monologues.
+**🧠 Multi-Agent Intelligence**
+Six specialist AI agents collaborate on every response. Each reads the previous agent's output and builds on it — true sequential reasoning, not parallel noise.
+
+**📚 RAG Knowledge Base**
+12 detailed martial arts coaching documents power the system. Technique breakdowns, fight strategy, conditioning protocols, nutrition guides, mental game frameworks — all retrieved semantically before the agents speak.
+
+**💾 Long-Term Memory**
+The coach extracts facts from your conversations and stores them. Your training background, goals, injuries, and techniques practiced persist across every session. The longer you use it, the sharper it gets.
+
+**🎯 Personalised Onboarding**
+New users complete a quick dojo intake — experience level, training goals, styles practiced. This profile immediately personalises every response from the first message.
+
+**📋 Training Plan Generator**
+Input your weekly schedule and goals. The system generates a specific, day-by-day training program with exact drills, round counts, and intensity levels. Downloadable as a text file.
+
+**⚔️ Unified Sensei Voice**
+The final response always comes through the Master Coach Coordinator — synthesised into flowing paragraphs, never bullet points, warm but demanding. Like a real sensei who has seen a thousand students walk through the door.
+
+---
+
+## How It Works
+
+```
+Your Question
+     ↓
+Orchestrator decides which agents are needed
+     ↓
+Master Chen → Sensei Ryu → Coach Maya → Dr. Kai → Dr. Santos
+(each agent reads the previous one's output)
+     ↓
+RAG retrieves relevant knowledge from ChromaDB
+     ↓
+Master Coach Coordinator synthesizes everything
+     ↓
+One unified coaching response
+```
+
+---
+
+## Agent Roster
 
 | Agent | Personality | Specialty |
 |-------|------------|-----------|
 | **Master Chen** | Strict, precise, no-nonsense | Striking mechanics, footwork, defensive form |
 | **Sensei Ryu** | Calm, powerful, philosophical | Mindset, discipline, Eastern wisdom, Stoicism |
-| **Coach Maya** | Military precision | Weekly training plans, intensity, periodization |
-| **Dr. Kai** | Practical, direct | Fighter nutrition, hydration, recovery meals |
-| **Dr. Santos** | Safety-first, measured | Injury awareness, load management, red flags |
+| **Coach Maya** | Military precision | Day-by-day training plans, periodization |
+| **Dr. Kai** | Practical, direct | Fighter nutrition, hydration, recovery |
+| **Dr. Santos** | Ringside experience | Injury awareness, load management |
 | **Master Coach Coordinator** | Warm, wise, unified | Synthesizes all inputs into one sensei voice |
-
----
-
-## Long-Term Memory
-
-The coach learns who you are over time. After every conversation, `memory_manager.py` extracts key facts — training experience, goals, techniques practiced, injuries — and saves them to `memory.json`.
-
-Next session, the coach already knows you. The longer you use it, the more personalized it becomes.
-
----
-
-## RAG — Knowledge Base
-
-The coach answers from a real martial arts knowledge base, not just LLM training data. Documents covering Muay Thai, Boxing, Kickboxing, nutrition, injury prevention, and mindset are stored in a ChromaDB vector database. On each query, the most relevant knowledge is retrieved and injected into the agent context before generation.
 
 ---
 
@@ -52,10 +77,10 @@ The coach answers from a real martial arts knowledge base, not just LLM training
 | Technology | Purpose |
 |-----------|---------|
 | Python 3.11 | Core language |
-| CrewAI | Multi-agent orchestration |
+| CrewAI | Multi-agent orchestration framework |
 | Google Gemini 2.5 Flash | LLM powering all agents |
 | ChromaDB | Vector database for RAG |
-| Sentence Transformers | Embeddings for semantic search |
+| Sentence Transformers | Semantic embeddings (all-MiniLM-L6-v2) |
 | Streamlit | Web UI |
 | python-dotenv | Secure API key management |
 
@@ -63,7 +88,7 @@ The coach answers from a real martial arts knowledge base, not just LLM training
 
 ## Setup
 
-**1. Clone the repo and create a virtual environment:**
+**1. Clone and create virtual environment:**
 ```bash
 git clone https://github.com/Raghavrana01/martial-arts-coach.git
 cd martial-arts-coach
@@ -81,20 +106,19 @@ source env/bin/activate
 pip install streamlit crewai litellm python-dotenv chromadb sentence-transformers google-generativeai
 ```
 
-**3. Configure your API keys:**
-
-Create a `.env` file in the project root:
+**3. Add your API keys** — create a `.env` file:
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
-GOOGLE_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=your_key_here
+GOOGLE_API_KEY=your_key_here
 ```
-
-Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com).
+Get a free key at [aistudio.google.com](https://aistudio.google.com)
 
 **4. Run:**
 ```bash
 streamlit run app.py
 ```
+
+The knowledge base builds automatically on first run.
 
 ---
 
@@ -102,19 +126,21 @@ streamlit run app.py
 
 ```
 martial-arts-coach/
-├── app.py                     # Streamlit frontend and main application logic
-├── crew_coach.py              # CrewAI agents, tasks, and sequential pipeline
-├── memory_manager.py          # Fact extraction and persistent memory storage
-├── knowledge_base.py          # ChromaDB vector store setup and search
-├── martial_arts_knowledge.py  # Martial arts knowledge documents
-├── setup_rag.py               # Script to build the knowledge base
-├── .env                       # API keys (never committed to version control)
-├── .env.example               # Template for environment setup
-└── memory.json                # Auto-generated: stores your training profile
+├── app.py                     # Streamlit UI, onboarding, training plan tab
+├── crew_coach.py              # CrewAI agents, tasks, sequential pipeline
+├── memory_manager.py          # Long-term memory extraction and storage
+├── knowledge_base.py          # ChromaDB vector store and semantic search
+├── martial_arts_knowledge.py  # 12 detailed martial arts coaching documents
+├── setup_rag.py               # Knowledge base initialization script
+├── .env.example               # API key template
+└── memory.json                # Auto-generated training profile (gitignored)
 ```
 
 ---
 
+
 ## Disclaimer
 
-This AI coach is for educational and motivational purposes only. It is not a substitute for professional coaching, medical advice, or emergency care. For injuries, pain, or health concerns — see a real professional.
+For educational and motivational purposes. Not a substitute for a real coach, doctor, or emergency care.
+
+---
