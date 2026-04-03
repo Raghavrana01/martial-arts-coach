@@ -42,6 +42,9 @@ Input your weekly schedule and goals. The system generates a specific, day-by-da
 **⚔️ Unified Sensei Voice**
 The final response always comes through the Master Coach Coordinator — synthesised into flowing paragraphs, never bullet points, warm but demanding. Like a real sensei who has seen a thousand students walk through the door.
 
+**👁️ Technique Vision**
+Upload a photo of your stance or technique. Gemini Vision analyses your form — guard position, balance, alignment, defensive structure — then Master Chen delivers specific corrections and drills based on what he sees.
+
 ---
 
 ## How It Works
@@ -142,15 +145,15 @@ martial-arts-coach/
 
 ---
 ## Recent Updates
+- Added Gemini Vision technique analysis — upload a photo, get real-time form coaching from Master Chen
 - Fixed first-message rendering bug — responses now appear instantly without requiring a second prompt
-- Mobile sidebar collapsed by default with compact memory display
 - RAG fallback to LLM knowledge when no relevant documents found
 - Per-user memory files so multiple users maintain separate profiles
 
 ## What's Next
-- Video / image technique analysis via Gemini Vision
 - Krav Maga and expanded striking arts knowledge base
 - Expanded RAG corpus with sport-specific documents
+- Video technique analysis (frame-by-frame breakdown)
 
 ## Disclaimer
 
