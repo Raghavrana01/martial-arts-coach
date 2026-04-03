@@ -25,6 +25,7 @@ st.set_page_config(
     page_title="Martial Arts AI Coach",
     page_icon="🥋",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 # Premium Dark Martial Arts Theme CSS
@@ -114,6 +115,45 @@ st.markdown("""
         white-space: pre-wrap;
     }
 
+    /* Memory Pills */
+    .memory-pill {
+        background-color: #FFD700;
+        color: black;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin: 0.2rem;
+        display: inline-block;
+    }
+    
+    .memory-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* Sticky Header */
+    .sticky-header {
+        background-color: #0a0a0a;
+        color: #FFD700;
+        padding: 1rem;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border-bottom: 2px solid #FFD700;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        margin-bottom: 1rem;
+    }
+    
+    /* Mobile Input Padding */
+    .stChatInput {
+        padding-bottom: 2rem !important;
+    }
+    
     /* Hide default streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -144,9 +184,13 @@ with st.sidebar:
     # Memory Section
     st.markdown("### 🏺 Coach Remembers:")
     if st.session_state.user_memory:
+        memory_html = '<div class="memory-container">'
         for category, info in st.session_state.user_memory.items():
             if info:
-                st.markdown(f"**{category.replace('_', ' ').title()}**: {info}")
+                display_text = f"{category.replace('_', ' ').title()}: {info}"
+                memory_html += f'<span class="memory-pill">{display_text}</span>'
+        memory_html += '</div>'
+        st.markdown(memory_html, unsafe_allow_html=True)
     else:
         st.info("No prior training memory yet.")
     
@@ -197,8 +241,9 @@ tab1, tab2 = st.tabs(["🥋 Dojo Chat", "📋 Training Plan"])
 
 # --- Tab 1: Dojo Chat ---
 with tab1:
-    st.markdown('<h2 style="color: #FFD700; text-align: center;">Combat Sports Dojo</h2>', unsafe_allow_html=True)
-
+    # Sticky header for mobile
+    st.markdown('<div class="sticky-header">🥋 SENSEI AI</div>', unsafe_allow_html=True)
+    
     # 1. Render history first
     for msg in st.session_state.messages:
         if msg["role"] == "user":
