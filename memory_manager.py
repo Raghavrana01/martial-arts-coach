@@ -13,27 +13,33 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 os.environ["GOOGLE_API_KEY"] = os.environ.get("GEMINI_API_KEY", "")
 
 MODEL = "gemini/gemini-2.5-flash"
-MEMORY_FILE = Path(__file__).resolve().parent / "memory.json"
 
-def save_memory(facts: dict):
-    """Saves the provided facts dictionary to memory.json."""
-    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+def get_memory_file(username: str) -> Path:
+    """Returns the Path to the user-specific memory file."""
+    return Path(__file__).resolve().parent / f"memory_{username}.json"
+
+def save_memory(facts: dict, username: str):
+    """Saves the provided facts dictionary to memory_{username}.json."""
+    memory_file = get_memory_file(username)
+    with open(memory_file, "w", encoding="utf-8") as f:
         json.dump(facts, f, indent=4, ensure_ascii=False)
 
-def load_memory() -> dict:
-    """Loads and returns the facts dictionary from memory.json, returns empty dict if not found."""
-    if not MEMORY_FILE.exists():
+def load_memory(username: str) -> dict:
+    """Loads and returns the facts dictionary from memory_{username}.json, returns empty dict if not found."""
+    memory_file = get_memory_file(username)
+    if not memory_file.exists():
         return {}
     try:
-        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+        with open(memory_file, "r", encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, IOError):
         return {}
 
-def extract_facts(conversation_history: list) -> dict:
+def extract_facts(conversation_history: list, username: str) -> dict:
     """
     Calls Gemini API via litellm to extract key facts (experience, goals, injuries, techniques)
     from the conversation history and returns them as a dictionary.
+    The username is used for logging/tracking purposes.
     """
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -80,5 +86,5 @@ if __name__ == "__main__":
     ]
     print("Extracting facts for test...")
     # This will only work if GEMINI_API_KEY is set in .env
-    # facts = extract_facts(test_history)
+    # facts = extract_facts(test_history, "test_user")
     # print(facts)

@@ -9,7 +9,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 from crew_coach import (
     run_agent_pipeline,
 )
-from memory_manager import extract_facts, load_memory, save_memory, MEMORY_FILE
+from memory_manager import extract_facts, load_memory, save_memory, get_memory_file
 from knowledge_base import knowledge_base_exists, build_knowledge_base
 from martial_arts_knowledge import KNOWLEDGE_DOCUMENTS
 
@@ -125,8 +125,11 @@ st.markdown("""
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "user_name" not in st.session_state:
+    st.session_state.user_name = "guest"
+
 if "user_memory" not in st.session_state:
-    st.session_state.user_memory = load_memory()
+    st.session_state.user_memory = load_memory(st.session_state.user_name)
 
 if "current_plan" not in st.session_state:
     st.session_state.current_plan = ""
@@ -135,6 +138,9 @@ if "current_plan" not in st.session_state:
 with st.sidebar:
     st.markdown('<div class="sidebar-title">🥋 SENSEI AI</div>', unsafe_allow_html=True)
     
+    if st.session_state.user_name != "guest":
+        st.markdown(f'<div style="color: #FFD700; text-align: center; margin-bottom: 1rem;">Welcome back, {st.session_state.user_name}!</div>', unsafe_allow_html=True)
+
     # Memory Section
     st.markdown("### 🏺 Coach Remembers:")
     if st.session_state.user_memory:
@@ -148,8 +154,9 @@ with st.sidebar:
     
     # Actions
     if st.button("🗑️ Clear Memory"):
-        if MEMORY_FILE.exists():
-            os.remove(MEMORY_FILE)
+        memory_file = get_memory_file(st.session_state.user_name)
+        if memory_file.exists():
+            os.remove(memory_file)
         st.session_state.user_memory = {}
         st.success("Memory purged.")
         st.rerun()
@@ -165,20 +172,23 @@ if not st.session_state.user_memory:
     st.markdown('<p style="text-align: center;">Before we begin your training, Sensei needs to know who you are.</p>', unsafe_allow_html=True)
     
     with st.form("onboarding_form"):
+        user_name = st.text_input("Your Username", placeholder="Enter your name...")
         exp_level = st.selectbox("What is your experience level?", ["Beginner", "Intermediate", "Advanced"])
         goal = st.selectbox("What is your primary goal?", ["Get Fit", "Compete", "Self Defence", "General Martial Arts"])
         styles = st.multiselect("What styles do you train?", ["Muay Thai", "Boxing", "Kickboxing", "MMA", "Other"])
         
         submitted = st.form_submit_button("Start Training")
         if submitted:
+            final_username = user_name.strip() if user_name.strip() else "guest"
             onboarding_data = {
                 "experience_level": exp_level,
                 "primary_goal": goal,
                 "styles_trained": ", ".join(styles) if styles else "Not specified"
             }
-            save_memory(onboarding_data)
+            save_memory(onboarding_data, final_username)
+            st.session_state.user_name = final_username
             st.session_state.user_memory = onboarding_data
-            st.success("Your profile is recorded. Welcome, student.")
+            st.success(f"Your profile is recorded, {final_username}. Welcome, student.")
             st.rerun()
     st.stop()
 
@@ -189,68 +199,73 @@ tab1, tab2 = st.tabs(["🥋 Dojo Chat", "📋 Training Plan"])
 with tab1:
     st.markdown('<h2 style="color: #FFD700; text-align: center;">Combat Sports Dojo</h2>', unsafe_allow_html=True)
 
-    chat_container = st.container()
+    # 1. Render history first
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+                <div class="coach-message">
+                    <b>🥋 Sensei:</b><br>{msg["content"]}
+                    <div class="agent-tags">{msg.get("agents", "Crew")}</div>
+                </div>
+                """, unsafe_allow_html=True)
+    st.markdown('<div style="clear: both;"></div>', unsafe_allow_html=True)
 
-    with chat_container:
-        for msg in st.session_state.messages:
-            if msg["role"] == "user":
-                st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                    <div class="coach-message">
-                        <b>🥋 Sensei:</b><br>{msg["content"]}
-                        <div class="agent-tags">{msg.get("agents", "Crew")}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+    # 2. Input at bottom
+    question = st.chat_input("Ask your coach anything...")
+
+    if question:
+        user_text = question.strip()
+        
+        # Prepare context for pipeline
+        conversation_history = st.session_state.messages[-6:]
+        user_memory_str = str(st.session_state.user_memory)
+        
+        try:
+            with st.spinner("⚔️ Your coaches are deliberating..."):
+                activated, reply = run_agent_pipeline(
+                    user_text,
+                    conversation_history=conversation_history,
+                    user_memory=user_memory_str,
+                )
+        except Exception as e:
+            reply = f"The flow of energy was interrupted: {e}"
+            activated = ["Error"]
+
+        agents_line = " → ".join(activated) if activated else "Sensei"
+        
+        # Render both user and coach bubbles IMMEDIATELY inline
+        st.markdown(f'<div class="user-message">{user_text}</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+            <div class="coach-message">
+                <b>🥋 Sensei:</b><br>{reply}
+                <div class="agent-tags">{agents_line}</div>
+            </div>
+            """, unsafe_allow_html=True)
         st.markdown('<div style="clear: both;"></div>', unsafe_allow_html=True)
+        
+        # Append to state after rendering
+        st.session_state.messages.append({"role": "user", "content": user_text})
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": reply,
+                "agents": agents_line,
+            },
+        )
 
-    # Input Area
-    with st.form("chat_form", clear_on_submit=True):
-        col1, col2 = st.columns([8, 2])
-        with col1:
-            question = st.text_input("", placeholder="Ask your coach anything...", label_visibility="collapsed")
-        with col2:
-            submitted = st.form_submit_button("Ask Sensei")
+        # Background memory update
+        try:
+            new_facts = extract_facts(st.session_state.messages, st.session_state.user_name)
+            if new_facts:
+                st.session_state.user_memory.update(new_facts)
+                save_memory(st.session_state.user_memory, st.session_state.user_name)
+                print(f"Memory updated and saved for {st.session_state.user_name}")
+        except Exception as e:
+            print(f"Failed to update memory: {e}")
 
-        if submitted and question.strip():
-            user_text = question.strip()
-            st.session_state.messages.append({"role": "user", "content": user_text})
-            
-            # Prepare context for pipeline
-            conversation_history = st.session_state.messages[-6:]
-            user_memory_str = str(st.session_state.user_memory)
-            
-            try:
-                with st.spinner("⚔️ Your coaches are deliberating..."):
-                    activated, reply = run_agent_pipeline(
-                        user_text,
-                        conversation_history=conversation_history,
-                        user_memory=user_memory_str,
-                    )
-            except Exception as e:
-                reply = f"The flow of energy was interrupted: {e}"
-                activated = ["Error"]
-
-            agents_line = " → ".join(activated) if activated else "Sensei"
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": reply,
-                    "agents": agents_line,
-                },
-            )
-
-            # Background memory update
-            try:
-                new_facts = extract_facts(st.session_state.messages)
-                if new_facts:
-                    st.session_state.user_memory.update(new_facts)
-                    save_memory(st.session_state.user_memory)
-                    print("Memory updated and saved to memory.json")
-            except Exception as e:
-                print(f"Failed to update memory: {e}")
-
-            st.rerun()
+        st.rerun()
 
 # --- Tab 2: Training Plan ---
 with tab2:
