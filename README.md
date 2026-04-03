@@ -2,6 +2,10 @@
 
 > *"The successful warrior is the average man, with laser-like focus."* — Bruce Lee
 
+
+Designed to demonstrate real multi-agent architecture, RAG pipelines, and production deployment.
+
+
 A team of 6 AI specialists who collaborate in real-time to coach you in Muay Thai, Boxing, and Kickboxing. Not a chatbot. A coaching system that thinks, remembers, and grows with you.
 
 🚀 **[Try It Live →](https://martial-arts-coach-kdjjzmtrvapwl3zcc9stje.streamlit.app)**
@@ -137,7 +141,16 @@ martial-arts-coach/
 ```
 
 ---
+## Recent Updates
+- Fixed first-message rendering bug — responses now appear instantly without requiring a second prompt
+- Mobile sidebar collapsed by default with compact memory display
+- RAG fallback to LLM knowledge when no relevant documents found
+- Per-user memory files so multiple users maintain separate profiles
 
+## What's Next
+- Video / image technique analysis via Gemini Vision
+- Krav Maga and expanded striking arts knowledge base
+- Expanded RAG corpus with sport-specific documents
 
 ## Disclaimer
 
