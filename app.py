@@ -2,6 +2,9 @@ import streamlit as st
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import google.generativeai as genai
+import base64
+from io import BytesIO
 
 # Load environment variables
 load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -193,7 +196,7 @@ if not st.session_state.user_memory:
     st.stop()
 
 # --- Main App Tabs ---
-tab1, tab2 = st.tabs(["🥋 Dojo Chat", "📋 Training Plan"])
+tab1, tab2, tab3 = st.tabs(["🥋 Dojo Chat", "📋 Training Plan", "👁️ Technique Vision"])
 
 # --- Tab 1: Dojo Chat ---
 with tab1:
@@ -310,3 +313,98 @@ with tab2:
                 file_name="martial_arts_training_plan.txt",
                 mime="text/plain"
             )
+
+# --- Tab 3: Technique Vision ---
+with tab3:
+    st.markdown('<h2 style="color: #FFD700; text-align: center;">Technique Vision Analysis</h2>', unsafe_allow_html=True)
+    
+    # File uploader
+    uploaded_file = st.file_uploader(
+        "Upload a photo of your martial arts stance or technique",
+        type=["jpg", "jpeg", "png"],
+        help="Upload a clear photo showing your stance, guard, or technique"
+    )
+    
+    if uploaded_file is not None:
+        # Display the uploaded image
+        st.image(uploaded_file, caption="Your technique",width=600)
+        
+        # Analyze button
+        if st.button("🔍 Analyze Technique", key="analyze_vision"):
+            with st.spinner("👁️ Master Chen is analyzing your technique..."):
+                try:
+                    # Configure Gemini
+                    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    
+                    # Convert image to bytes
+                    image_bytes = uploaded_file.getvalue()
+                    
+                    # Prepare the vision analysis prompt
+                    vision_prompt = """
+                    You are Master Chen, a veteran martial arts technique coach with 40 years of experience in Muay Thai, Boxing, Kickboxing, and various traditional martial arts.
+                    
+                    Analyze this martial arts technique/stance photo and provide a detailed technical assessment focusing on:
+                    1. Stance and balance
+                    2. Guard position and defensive structure
+                    3. Body positioning and alignment
+                    4. Any technical errors or areas for improvement
+                    5. Specific corrections that would improve the technique
+                    
+                    Be specific, technical, and actionable in your analysis. Focus on what you can actually see in the image.
+                    """
+                    
+                    # Create the content parts for Gemini
+                    image_part = {
+                        "mime_type": uploaded_file.type,
+                        "data": base64.b64encode(image_bytes).decode()
+                    }
+                    
+                    # Get vision analysis from Gemini
+                    response = model.generate_content([
+                        vision_prompt,
+                        image_part
+                    ])
+                    
+                    vision_analysis = response.text
+                    
+                    # Now pass this analysis to Master Chen (technique agent) for coaching feedback
+                    coaching_prompt = f"""
+                    A student has uploaded a photo of their martial arts technique. Here is what Gemini Vision analysis revealed about their technique:
+                    
+                    {vision_analysis}
+                    
+                    Based on this visual analysis, provide specific coaching feedback to help the student improve. Focus on:
+                    1. The most critical corrections needed
+                    2. Specific drills or exercises to fix the identified issues
+                    3. Key cues to remember when practicing this technique
+                    4. How these corrections will improve their overall performance
+                    
+                    Speak as Master Chen - direct, technical, and encouraging. Give actionable advice they can implement immediately.
+                    """
+                    
+                    # Use the existing crew system to get Master Chen's coaching
+                    activated, coaching_reply = run_agent_pipeline(
+                        coaching_prompt,
+                        conversation_history=[],
+                        user_memory=str(st.session_state.user_memory)
+                    )
+                    
+                    # Display the results in coach-message style
+                    st.markdown('<h3 style="color: #FFD700; margin-top: 2rem;">📸 Vision Analysis</h3>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="plan-box">{vision_analysis}</div>', unsafe_allow_html=True)
+                    
+                    st.markdown('<h3 style="color: #FFD700; margin-top: 2rem;">🥋 Master Chen\'s Coaching</h3>', unsafe_allow_html=True)
+                    st.markdown(f"""
+                        <div class="coach-message">
+                            <b>🥋 Master Chen:</b><br>{coaching_reply}
+                            <div class="agent-tags">{" → ".join(activated) if activated else "Technique Coach"}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    st.markdown('<div style="clear: both;"></div>', unsafe_allow_html=True)
+                    
+                except Exception as e:
+                    st.error(f"Error analyzing technique: {str(e)}")
+                    
+    else:
+        st.markdown('<div style="text-align: center; color: #888; margin-top: 3rem;">📷 Upload a photo to begin your technique analysis</div>', unsafe_allow_html=True)
